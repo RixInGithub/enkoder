@@ -109,7 +109,7 @@ function handleV(str)
 			str = str:sub(2) -- i already yank away chars that i do end up usinh
 			if bCnt==0 then break end -- it only breaks *after* i yanked away a char
 		end
-		v = _M.dcde(v,{}) -- yeah im just gonna recurse here lmfao
+		v = _M.dcde(v,{},true) -- yeah im just gonna recurse here lmfao
 		return v, str
 	end
 	local booler = (str:match("^(false)") or str:match("^(true)")) -- hehe get it? spooler but also bool lmfao im a comedy genius
@@ -127,7 +127,7 @@ function handleV(str)
 	error("blursed value") -- me handling this better make lua raise to >=25% for my most used langs stat smh
 end
 
-function _M.dcde(str, _)
+function _M.dcde(str, _, noEof)
 	str = str..""
 	local ch = str:sub(1,1)
 	local res = {}
@@ -135,8 +135,8 @@ function _M.dcde(str, _)
 		if str:sub(-1,-1) ~= "}" then return error(string.format("unfinished object: %s", str)) end
 		str = str:sub(2) -- slices off first `{`
 		while true do -- idefk
-			local k, str = eatJsonStr(str)
-			local v
+			local k,v
+			k, str = eatJsonStr(str)
 			str = str:gsub("^(%s+)","") -- our first likely place for whitespace...
 			if str:sub(1,1) ~= ":" then return error(string.format("expected \":\", got \"%s\"", str:sub(1,1))) end
 			str = str:sub(2):gsub("^(%s+)","")
@@ -149,7 +149,8 @@ function _M.dcde(str, _)
 			if ch == "}" then break end
 			str = str:gsub("^(%s+)","")
 		end
-		if str~="" then return error(string.format("expected eof after closing curly bracket, got %q", str)) end
+		str = str:sub(2)
+		if str~="" and noEof~=true then return error(string.format("expected eof after closing curly bracket, got %q", str)) end
 		return res
 	end
 	if ch == "[" then
