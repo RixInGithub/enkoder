@@ -45,6 +45,7 @@ function _M.encd(tbl, opts)
 	local indent = 4
 	if tonumber(opts.indent) then indent = tonumber(opts.indent) end -- first use of opts to do smth cooler!!
 	indent = math.max(indent,2) -- min val is 2, just to be saef.
+	if type(tbl)~="table" then return srz(tbl,indent) end
 	local res = {}
 	for k,v in pairs(tbl) do
 		local add = k..":"..srz(v, indent)
