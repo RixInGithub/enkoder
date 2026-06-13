@@ -47,8 +47,8 @@ local function srz(v)
 				goto __enkoder__srz__json__continue0
 			end
 			cp = cp - 0x10000
-			h = 0xD800+math.floor(cp/0x400)
-			l = 0xDC00+(cp%0x400)
+			h = 0xd800+math.floor(cp/0x400)
+			l = 0xdc00+(cp%0x400)
 			out = out..string.format("\\u%04x\\u%04x",h,l)
 			::__enkoder__srz__json__continue0::
 			count = count + 1
@@ -60,7 +60,8 @@ local function srz(v)
 end
 
 function _M.encd(tbl, _)
-	local out = "["
+	if type(tbl)~="table" then return srz(tbl) end
+	local start = "["
 	local bgstNum = -1
 	local looped = false
 	for a in pairs(tbl) do
@@ -92,9 +93,16 @@ function handleV(str)
 		v, str = eatJsonStr(str)
 		return v, str
 	end
-	if str:sub(1,1):match("([0-9])")~=nil then
-		v = str:match("^(-?%d+%.?%d*[eE]?-?%d*)")
+	if str:match("^[%-%d]")~=nil then
+		v = str:match("^-?%d+%.?%d*")
 		str = str:sub(#v+1)
+		if str:lower():sub(1,1)=="e" then
+			str = str:sub(2)
+			if str:match("^[%-%d]")==nil then return error(string.format("expected whole number after exponent, got \"%s\"",str:sub(1,1))) end
+			local e = str:match("^-?%d+")
+			str = str:sub(#e+1)
+			v = v.."e"..e
+		end
 		return tonumber(v), str
 	end
 	if str:sub(1,1) == "{" or str:sub(1,1) == "[" then
@@ -131,6 +139,11 @@ function _M.dcde(str, _, noEof)
 	str = str..""
 	local ch = str:sub(1,1)
 	local res = {}
+	local empty = str:sub(1,2)
+	if empty=="[]" or empty=="{}" then
+		if #str ~= 2 then return error(string.format("expected eof after \"%s\", got \"%s\"",({["{"]="}",["["]="]"})[ch],str:sub(3,3))) end
+		return {} -- either way an empty table lulz
+	end
 	if ch == "{" then
 		if str:sub(-1,-1) ~= "}" then return error(string.format("unfinished object: %s", str)) end
 		str = str:sub(2) -- slices off first `{`
@@ -144,18 +157,18 @@ function _M.dcde(str, _, noEof)
 			str = str:gsub("^(%s+)","")
 			ch = str:sub(1,1)
 			res[k]=v
-			if (ch ~= ",") and (ch ~= "}") then return error(string.format("expected comma or closing curly bracket, got \"%s\"", ch)) end -- you got me jumping like: boom shakalaka! boom shakalaka... boom!! boom shakalaka! boom shakalaka! boom.. boom shakala... boom shakala.. ahhhh!!
+			if (ch ~= ",") and (ch ~= "}") then return error(string.format("expected comma or \"}\", got \"%s\"", ch)) end -- you got me jumping like: boom shakalaka! boom shakalaka... boom!! boom shakalaka! boom shakalaka! boom.. boom shakala... boom shakala.. ahhhh!!
 			if ch == "," then str = str:sub(2) end
 			if ch == "}" then break end
 			str = str:gsub("^(%s+)","")
 		end
 		str = str:sub(2)
-		if str~="" and noEof~=true then return error(string.format("expected eof after closing curly bracket, got %q", str)) end
+		if str~="" and noEof~=true then return error(string.format("expected eof after \"}\", got %q", str)) end
 		return res
 	end
 	if ch == "[" then
 		if str:sub(-1,-1) ~= "]" then return error(string.format("unfinished array: %s", str)) end
-		str = str:sub(2) -- slices off first `{`
+		str = str:sub(2)
 		while true do
 			local v
 			str = str:gsub("^(%s+)","")
@@ -163,11 +176,13 @@ function _M.dcde(str, _, noEof)
 			str = str:gsub("^(%s+)","")
 			ch = str:sub(1,1)
 			table.insert(res, v)
-			if (ch ~= ",") and (ch ~= "]") then return error(string.format("expected comma or closing square bracket, got \"%s\"", ch)) end -- see line 148 😔
+			if (ch ~= ",") and (ch ~= "]") then return error(string.format("expected comma or \"]\", got \"%s\"", ch)) end -- see line 148 😔
 			if ch == "," then str = str:sub(2) end
 			if ch == "]" then break end
 			str = str:gsub("^(%s+)","")
 		end
+		str = str:sub(2)
+		if str~="" and noEof~=true then return error(string.format("expected eof after \"]\", got %q", str)) end
 		return res
 	end
 	local handleV_Res = {handleV(str)} -- might error on funny valeus but oh fucking well

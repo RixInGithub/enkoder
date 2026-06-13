@@ -11,7 +11,7 @@ _M.null = setmetatable({}, {
 return setmetatable(_M, { -- basically can be called, but also has enkoder.null
 	__call = function(_, inp, fmt)
 		if type(fmt) == "string" then return _M(inp, {fmt}) end
-		if type(inp) ~= "table" and type(inp) ~= "string" then return error(string.format("input must either be a table (to encode) or a string (to decode), instead got \"%s\"", type(inp))) end
+		-- if type(inp) ~= "table" and type(inp) ~= "string" then return error(string.format("input must either be a table (to encode) or a string (to decode), instead got \"%s\"", type(inp))) end
 		local opts = {}
 		for k,v in pairs(fmt) do
 			if type(tonumber(k)) == "number" then
@@ -33,10 +33,12 @@ return setmetatable(_M, { -- basically can be called, but also has enkoder.null
 		local srzs = require("enkoder.srz")
 		local oCnt = 0
 		local firstO
+		local toCall = "dcde"
+		if type(inp) ~= "string" then toCall = "encd" end
 		for oFmt,o in pairs(opts) do
 			for nm,srz in pairs(srzs) do
 				if nm == oFmt then
-					res[nm] = srz[({["table"]="encd",["string"]="dcde"})[type(inp)]](inp, o)
+					res[nm] = srz[toCall](inp, o)
 				end
 			end
 			if not res[oFmt] then return error(string.format("unknown format %q", oFmt)) end
