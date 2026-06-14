@@ -2,11 +2,31 @@
 -- such as json, msgpack and yaml
 -- huge wip
 
+function nullStr() return "enkoder.null" end
+
+local dkNull = (function()
+	local okay, res = pcall(function() return require("dkjson").null end)
+	return okay and res or nil
+end)()
 local _M = {}
 _M.null = setmetatable({}, {
-	__tostring = function()return"enkoder.null"end,
-	__call = function() return _M.null end
+	__tostring = nullStr,
+	__tojson = function() return "null" end, -- dkjson compatability
+	__call = function() return _M.null end,
+	__eq = function(a,b)
+		return _M.isNull(a) and _M.isNull(b)
+	end
 })
+
+function _M.isNull(a)
+	local mt = getmetatable(a)
+	if mt == nil then mt = {} end
+	local aStr = mt.__tostring
+	if dkNull~=nil and aStr == nil then -- explicit safeguard
+		if tostring(a)==tostring(dkNull) then return true end
+	end
+	return aStr==nullStr
+end
 
 return setmetatable(_M, { -- basically can be called, but also has enkoder.null
 	__call = function(_, inp, fmt)

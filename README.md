@@ -11,13 +11,17 @@ next, use enkoder however you'd like!
 ## usage
 to get started with enkoder, simply `require("enkoder")` to get a callable with items as follows:
 ### `enkoder.null`
-a simple dropin null value that enkoder uses.
+a simple dropin null value that enkoder uses. completely compatible with `dkjson.null`!
 
 this is a callable that returns `enkoder.null`. if stringified, returns `"enkoder.null"`.
 
-TODO: support `dkjson` null too
+`enkoder.null` also has the `__eq(a, b)` metamethod to check if a and b are reported true by `enkoder.isNull`.
+
+it can also be encoded into json `null` by `dkjson.encode`!
+### `enkoder.isNull(a)`
+a is the object to test if null using some clever tactics. will check if a is `enkoder.null` or `dkjson.null`
 ### `enkoder(inp, opts)`
-inp can either be a table to encode, or a string to decode.
+inp can be a string to decode, or anything else to encode.
 
 opts can either be a string for one single format to encode to/decode from, or a list-ish table of strings to denote multiple formats, or a key/value table of keys being format id strings and value being a table for specific format options.
 
@@ -31,27 +35,25 @@ example:
 
 ```
 > require("enkoder")({groceries = "yummh!", greenland = nil, greenland2 = require("enkoder").null, greenlands = {[1] = "im green...", [6] = "...dah buh dee dah buh die!!"}, swagLevels = 1000, more = {one = "jeffinitely"}, evenMore = {"hell yeah"}, h = {"yep", h = "h", "wut"}}, "json")
-{"groceries":"\u0079\u0075\u006d\u006d\u0068\u0021","swagLevels":1000,"greenland2":[],"more":{"one":"\u006a\u0065\u0066\u0066\u0069\u006e\u0069\u0074\u0065\u006c\u0079"},"evenMore":["\u0068\u0065\u006c\u006c\u0020\u0079\u0065\u0061\u0068"],"greenlands":["\u0069\u006d\u0020\u0067\u0072\u0065\u0065\u006e\u002e\u002e\u002e",null,null,null,null,"\u002e\u002e\u002e\u0064\u0061\u0068\u0020\u0062\u0075\u0068\u0020\u0064\u0065\u0065\u0020\u0064\u0061\u0068\u0020\u0062\u0075\u0068\u0020\u0064\u0069\u0065\u0021\u0021"],"h":{"1":"\u0079\u0065\u0070","2":"\u0077\u0075\u0074","h":"\u0068"}}
+{"groceries":"yummh!","more":{"one":"jeffinitely"},"swagLevels":1000,"greenlands":["im green...",null,null,null,null,"...dah buh dee dah buh die!!"],"greenland2":null,"evenMore":["hell yeah"],"h":{"1":"yep","2":"wut","h":"h"}}
 ```
 #### `yaml`
 yaml, aka "yaml ain't markup language". `yml` is an available alias for yaml.
 
-the only options this format optionally can gulp down is `indent`. the `indent` can be any number, minimum value 2 but the default is 4.
+the only options this format optionally can gulp down is `indent`. the `indent` can be any number, minimum value 1 but the default is 4.
+
+doesn't support encoding non-tables and decoding yet.
 
 example:
 
 ```
-> require("enkoder")({groceries = "yummh!", greenland = nil, greenland2 = require("enkoder").null, greenlands = {[1] = "im green...", [6] = "...dah buh dee dah buh die!!"}, swagLevels = 1000, more = {one = "jeffinitely"}, evenMore = {"hell yeah"}, h = {"yep", h = "h", "wut"}}, {yaml={indent=4}})
+> print(require("enkoder")({groceries = "yummh!", greenland = nil, greenland2 = require("enkoder").null, greenlands = {[1] = "im green...", [6] = "...dah buh dee dah buh die!!"}, swagLevels = 1000, more = {one = "jeffinitely"}, evenMore = {"hell yeah"}, h = {"yep", h = "h", "wut"}}, {yaml={indent=4}}))
 groceries: |
     yummh!
-swagLevels: 1000
-greenland2:
 more:
     one: |
         jeffinitely
-evenMore:
-    - |
-        hell yeah
+swagLevels: 1000
 greenlands:
     - |
         im green...
@@ -61,6 +63,10 @@ greenlands:
     - null
     - |
         ...dah buh dee dah buh die!!
+greenland2:
+evenMore:
+    - |
+        hell yeah
 h:
     1: |
         yep

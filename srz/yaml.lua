@@ -38,14 +38,14 @@ function srz(v, indent)
 		end
 		return "\n"..indentStr(_M.encd(v, {indent=indent}),indent)
 	end
-	if (v == nil) or (v == require("enkoder").null) then return " null" end -- handling nil bcuz just in case™
+	if (v == nil) or require("enkoder").isNull(v) then return " null" end -- handling nil bcuz just in case™
 end
 
 function _M.encd(tbl, opts)
 	local indent = 4
 	if tonumber(opts.indent) then indent = tonumber(opts.indent) end -- first use of opts to do smth cooler!!
-	indent = math.max(indent,2) -- min val is 2, just to be saef.
-	if type(tbl)~="table" then return srz(tbl,indent) end
+	indent = math.max(indent,1) -- no indent for yaml is like tearing your flesh off
+	if type(tbl)~="table" then return error("can only encode table") end
 	local res = {}
 	for k,v in pairs(tbl) do
 		local add = k..":"..srz(v, indent)

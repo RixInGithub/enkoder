@@ -42,6 +42,15 @@ local function srz(v)
 		while count <= utf8.len(v) do -- time to sweep everything under the \uXXXX rug
 			local cp = utf8.codepoint(v,utf8.offset(v,count))
 			local h, l
+			local ref = {[8]="b",[9]="t",[10]="n",[12]="f",[13]="r",[34]="\"",[47]="/",[92]="\\"}
+			if ref[cp] then
+				out = out.."\\"..ref[cp]
+				goto __enkoder__srz__json__continue0
+			end
+			if cp >= 32 and cp <= 126 then -- not trying to do full unicode over here, i'm only going to do |isprint(cp)|
+				out = out..string.format("%c",cp)
+				goto __enkoder__srz__json__continue0
+			end
 			if cp <= 0xffff then
 				out = out..string.format("\\u%04x",cp)
 				goto __enkoder__srz__json__continue0
@@ -55,27 +64,37 @@ local function srz(v)
 		end
 		return out.."\""
 	end
-	if (v == nil) or (v == require("enkoder").null) then return "null" end -- handling nil bcuz just in case™
+	if (v == nil) or require("enkoder").isNull(v) then return "null" end -- handling nil bcuz just in case™
 	error(string.format("expected type table, string, number, nil or enkoder.null, got %s",type(v)))
 end
 
 function _M.encd(tbl, _)
 	if type(tbl)~="table" then return srz(tbl) end
-	local start = "["
+	local mt = getmetatable(tbl)
+	if mt == nil then mt = {} end
+	local tStr = mt.__tojson
+	if tStr~=nil then return tStr(tbl) end
+	local isObj = mt.__jsontype == "object" -- i set __jsontype to nonsense and dkjson took that as an array, no errors. lol.
 	local bgstNum = -1
 	local looped = false
-	for a in pairs(tbl) do
-		if tostring(a):match("^(%d+)$") == nil then
-			out="{"
-			for k,v in pairs(tbl) do
-				if looped then out = out.."," end
-				looped = true
-				if v~=nil then out = out.."\""..tostring(k):gsub("\"", "\\\"").."\":"..srz(v) end -- tbl[k] = v means making k vanish so were doing that too
+	local out = ""
+	if not isObj then
+		for a in pairs(tbl) do
+			if tostring(a):match("^(%d+)$") == nil then
+				isObj = true
+				break
 			end
-			return out.."}"
+			a=a+0
+			if a > bgstNum then bgstNum = a end
 		end
-		a=a+0
-		if a > bgstNum then bgstNum = a end
+	end
+	if isObj then
+		for k,v in pairs(tbl) do
+			if looped then out = out.."," end
+			looped = true
+			if v~=nil then out = out..srz(tostring(k))..":"..srz(v) end -- tbl[k] = v means making k vanish so were doing that too
+		end
+		return "{"..out.."}"
 	end
 	local count = 1
 	while count<=bgstNum do
@@ -84,7 +103,7 @@ function _M.encd(tbl, _)
 		out = out..srz(tbl[count])
 		count = count + 1
 	end
-	return out.."]"
+	return "["..out.."]"
 end
 
 function handleV(str)
@@ -115,12 +134,12 @@ function handleV(str)
 			if str:sub(1,1) == oEnd then bCnt = bCnt - 1 end
 			v = v..str:sub(1,1)
 			str = str:sub(2) -- i already yank away chars that i do end up usinh
-			if bCnt==0 then break end -- it only breaks *after* i yanked away a char
+			if bCnt==0 then break end -- this doesn't run on first loop because bCnt is already 1 by now
 		end
 		v = _M.dcde(v,{},true) -- yeah im just gonna recurse here lmfao
 		return v, str
 	end
-	local booler = (str:match("^(false)") or str:match("^(true)")) -- hehe get it? spooler but also bool lmfao im a comedy genius
+	local booler = (str:match("^false") or str:match("^true")) -- hehe get it? spooler but also bool lmfao im a comedy genius
 	if booler~=nil then
 		v=booler=="true"
 		str = str:sub(#booler+1) -- hehehey get yank'd
